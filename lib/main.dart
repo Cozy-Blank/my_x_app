@@ -397,14 +397,95 @@ class _SavedListScreenState extends State<SavedListScreen> {
     _loadSavedPosts();
   }
 
-  Future<void> _loadSavedPosts() async {
-    final prefs = await SharedPreferences.getInstance();
-    final String? dataStr = prefs.getString('saved_posts');
-    if (dataStr != null) {
-      final List<dynamic> decoded = jsonDecode(dataStr);
+  Future<void> _fetchTweetText(String url) async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+      _tweetText = null;
+      _tweetAuthor = null;
+    });
+
+    try {
+      // ツイートIDを抽出
+      final uri = Uri.parse(url);
+      final segments = uri.pathSegments;
+      final statusIndex = segments.indexOf('status');
+      
+      if (statusIndex != -1 && statusIndex + 1 < segments.length) {
+        final tweetId = segments[statusIndex + 1];
+        
+        // fxTwitterのAPIを使用して全文を取得
+        final fxResponse = await http.get(
+          Uri.parse('https://api.fxtwitter.com/status/$tweetId'),
+        );
+
+        if (fxResponse.statusCode == 200) {
+          final data = json.decode(fxResponse.body);
+          if (data['tweet'] != null) {
+            final tweet = data['tweet'];
+            final String text = tweet['text'] ?? '';
+            final String author = tweet['author']?['name'] ?? '';
+
+            setState(() {
+              _tweetText = text;
+              _tweetAuthor = author;
+              _isLoading = false;
+            });
+            return;
+          }
+        }
+      }
+
+      // 万が一失敗した場合は従来のoEmbed APIをフォールバックとして使用
+      final response = await http.get(
+        Uri.parse('https://publish.twitter.com/oembed?url=${Uri.encodeComponent(url)}'),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final htmlContent = data['html'] as String?;
+        final authorName = data['author_name'] as String?;
+
+        if (htmlContent != null) {
+          final document = html_parser.parse(htmlContent);
+          final pElement = document.querySelector('p');
+
+          if (pElement != null) {
+            pElement.querySelectorAll('br').forEach((br) => br.replaceWith(html_parser.Text('\n')));
+            pElement.querySelectorAll('a').forEach((a) {
+              if (a.text.startsWith('pic.twitter.com') || a.text.startsWith('http')) {
+                a.remove();
+              }
+            });
+
+            setState(() {
+              _tweetText = pElement.text.trim();
+              _tweetAuthor = authorName;
+              _isLoading = false;
+            });
+            return;
+          }
+        }
+      }
+
       setState(() {
-        _savedPosts = decoded.cast<Map<String, dynamic>>();
+        _errorMessage = 'ツイート本文を取得できませんでした。';
+        _isLoading = false;
       });
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'エラーが発生しました: $e';
+        _isLoading = false;
+      });
+    }
+  }
+    
+    
+    
+      
+      
+
+      
     }
   }
 
