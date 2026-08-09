@@ -137,12 +137,85 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _fetchTweetText(String url) async {
+    if (url.isEmpty) return;
+
     setState(() {
       _isLoading = true;
-      _errorMessage = null;
+      _authorName = null;
       _tweetText = null;
-      _tweetAuthor = null;
+      _selectedCategory = null;
     });
+
+    try {
+      final uri = Uri.parse(url);
+      final segments = uri.pathSegments;
+      final statusIndex = segments.indexOf('status');
+
+      if (statusIndex != -1 && statusIndex + 1 < segments.length) {
+        final tweetId = segments[statusIndex + 1];
+
+        // FixTweet APIで全文取得
+        final fxResponse = await http.get(
+          Uri.parse('https://api.fxtwitter.com/status/$tweetId'),
+        );
+
+        if (fxResponse.statusCode == 200) {
+          final data = json.decode(fxResponse.body);
+          if (data['tweet'] != null) {
+            final tweet = data['tweet'];
+            final String text = tweet['text'] ?? '';
+            final String author = tweet['author']?['name'] ?? '';
+
+            setState(() {
+              _authorName = author;
+              _tweetText = text;
+              _selectedCategory = _categorizeText(text);
+              _isLoading = false;
+            });
+            return;
+          }
+        }
+      }
+
+      // フォールバック（oEmbed）
+      final oembedUrl = Uri.parse(
+        'https://publish.twitter.com/oembed?url=${Uri.encodeComponent(url)}&omit_script=true',
+      );
+      final response = await http.get(oembedUrl);
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = jsonDecode(response.body);
+        final String rawHtml = data['html'] ?? '';
+        final document = html_parser.parse(rawHtml);
+        final pElement = document.querySelector('p');
+
+        if (pElement != null) {
+          pElement.querySelectorAll('br').forEach((br) => br.replaceWith(html_parser.Text('\n')));
+          pElement.querySelectorAll('a').forEach((a) {
+            if (a.text.startsWith('pic.twitter.com') || a.text.startsWith('http')) {
+              a.remove();
+            }
+          });
+        }
+
+        final cleanText = pElement?.text ?? document.body?.text ?? '';
+
+        setState(() {
+          _authorName = data['author_name'];
+          _tweetText = cleanText;
+          _selectedCategory = _categorizeText(cleanText);
+        });
+      } else {
+        _showSnackBar('ポストの取得に失敗しました');
+      }
+    } catch (e) {
+      _showSnackBar('エラーが発生しました: $e');
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
 
     try {
       final response = await http.get(
