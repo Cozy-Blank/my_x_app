@@ -158,7 +158,16 @@ class _HomeScreenState extends State<HomeScreen> {
         final String rawHtml = data['html'] ?? '';
         final document = html_parser.parse(rawHtml);
         final pElement = document.querySelector('p');
-        final cleanText = pElement?.text ?? document.body?.text ?? '';
+String cleanText = '';
+
+if (pElement != null) {
+  // <br> タグを改行コード \n に変換して全文章を取得
+  pElement.querySelectorAll('br').forEach((br) => br.replaceWith(html_parser.Text('\n')));
+  cleanText = pElement.text;
+} else {
+  cleanText = document.body?.text ?? '';
+}
+  
 
         setState(() {
           _authorName = data['author_name'];
@@ -278,7 +287,14 @@ class _HomeScreenState extends State<HomeScreen> {
                         ],
                       ),
                       const SizedBox(height: 8),
-                      Text(_tweetText!, style: const TextStyle(fontSize: 16)),
+                      // 【変更前】
+// Text(_tweetText!, style: const TextStyle(fontSize: 16)),
+
+// 【変更後】
+SelectableText(
+  _tweetText!,
+  style: const TextStyle(fontSize: 16, height: 1.4),
+),
                       const SizedBox(height: 16),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.end,
@@ -437,10 +453,20 @@ class _SavedListScreenState extends State<SavedListScreen> {
                                 ],
                               ),
                               const SizedBox(height: 4),
-                              Text(
-                                item['text'] ?? '',
-                                style: const TextStyle(fontSize: 15),
-                              ),
+                              // 【変更前】
+// Text(
+//   item['text'] ?? '',
+//   style: const TextStyle(fontSize: 15),
+// ),
+
+// 【変更後】
+SelectableText(
+  item['text'] ?? '',
+  style: const TextStyle(fontSize: 15, height: 1.4),
+),
+                                
+                                
+                              
                               const SizedBox(height: 12),
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
