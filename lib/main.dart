@@ -137,14 +137,69 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _fetchTweetText(String url) async {
-    if (url.isEmpty) return;
-
     setState(() {
       _isLoading = true;
-      _authorName = null;
+      _errorMessage = null;
       _tweetText = null;
-      _selectedCategory = null;
+      _tweetAuthor = null;
     });
+
+    try {
+      final response = await http.get(
+        Uri.parse('https://publish.twitter.com/oembed?url=${Uri.encodeComponent(url)}'),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final htmlContent = data['html'] as String?;
+        final authorName = data['author_name'] as String?;
+
+        if (htmlContent != null) {
+          final document = html_parser.parse(htmlContent);
+          final pElement = document.querySelector('p');
+
+          if (pElement != null) {
+            // <br> を改行に変換
+            pElement.querySelectorAll('br').forEach((br) => br.replaceWith(html_parser.Text('\n')));
+            
+            // リンクaタグ（http... や pic.twitter.com...）を消去してテキストだけを抽出
+            pElement.querySelectorAll('a').forEach((a) {
+              if (a.text.startsWith('pic.twitter.com') || a.text.startsWith('http')) {
+                a.remove();
+              }
+            });
+
+            String cleanText = pElement.text.trim();
+
+            setState(() {
+              _tweetText = cleanText;
+              _tweetAuthor = authorName;
+              _isLoading = false;
+            });
+            return;
+          }
+        }
+      }
+      
+      setState(() {
+        _errorMessage = 'ツイート本文を取得できませんでした。';
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'エラーが発生しました: $e';
+        _isLoading = false;
+      });
+    }
+  }
+    
+
+    
+      
+      
+      
+      
+    
 
     try {
       final oembedUrl = Uri.parse(
