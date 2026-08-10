@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>タスク & 買い物メモ</title>
+  <style>
+    :root {
+      --primary: #4f46e5;
+      --primary-hover: #4338ca;
+      --bg: #f1f5f9;
+      --card-bg: #ffffff;
+      --text: #0f172a;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      
+      --shopping-color: #059669;
+      --shopping-bg: #ecfdf5;
+      
+      --daiso-color: #e11d48;
+      --daiso-bg: #fff1f2;
+      
+      --seria-color: #0d9488;
+      --seria-bg: #f0fdfa;
+      
+      --cando-color: #ea580c;
+      --cando-bg: #fff7ed;
+      
+      --todo-color: #2563eb;
+      --todo-bg: #eff6ff;
+      --danger: #ef4444;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      padding-bottom: 40px;
+    }
+
+    /* モバイルアプリ風ヘッダー */
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: var(--card-bg);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 16px;
+      text-align: center;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    }
+
+    header h1 {
+      font-size: 1.1rem;
+      font-weight: 700;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 12px 12px 0 12px;
+    }
+
+    /* 入力フォーム */
+    .form-card {
+      background: var(--card-bg);
+      border-radius: 16px;
+      padding: 14px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+      margin-bottom: 14px;
+      border: 1px solid var(--border);
+    }
+
+    .type-selector-wrapper {
+      overflow-x: auto;
+      margin-bottom: 12px;
+      padding-bottom: 4px;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .type-selector-wrapper::-webkit-scrollbar {
+      display: none;
+    }
+
+    .type-selector {
+      display: flex;
+      gap: 6px;
+      width: max-content;
+    }
+
+    .type-btn {
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      background: #fff;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+
+    .type-btn.active[data-type="shopping"] {
+      background: var(--shopping-bg);
+      color: var(--shopping-color);
+      border-color: var(--shopping-color);
+    }
+
+    .type-btn.active[data-type="daiso"] {
+      background: var(--daiso-bg);
+      color: var(--daiso-color);
+      border-color: var(--daiso-color);
+    }
+
+    .type-btn.active[data-type="seria"] {
+      background: var(--seria-bg);
+      color: var(--seria-color);
+      border-color: var(--seria-color);
+    }
+
+    .type-btn.active[data-type="cando"] {
+      background: var(--cando-bg);
+      color: var(--cando-color);
+      border-color: var(--cando-color);
+    }
+
+    .type-btn.active[data-type="todo"] {
+      background: var(--todo-bg);
+      color: var(--todo-color);
+      border-color: var(--todo-color);
+    }
+
+    .input-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    input[type="text"], input[type="date"] {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      font-size: 0.95rem;
+      outline: none;
+      background: #f8fafc;
+      appearance: none;
+    }
+
+    input[type="text"]:focus, input[type="date"]:focus {
+      border-color: var(--primary);
+      background: #fff;
+    }
+
+    .form-group {
+      margin-bottom: 10px;
+    }
+
+    .add-btn {
+      width: 100%;
+      padding: 12px;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 0.95rem;
+      cursor: pointer;
+    }
+
+    .add-btn:active {
+      background: var(--primary-hover);
+    }
+
+    /* 横スクロールフィルタータブ */
+    .tabs-wrapper {
+      overflow-x: auto;
+      margin-bottom: 12px;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .tabs-wrapper::-webkit-scrollbar {
+      display: none;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 8px;
+      width: max-content;
+      padding-bottom: 4px;
+    }
+
+    .tab {
+      padding: 8px 14px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      white-space: nowrap;
+    }
+
+    .tab.active {
+      color: #fff;
+      background: var(--primary);
+      border-color: var(--primary);
+    }
+
+    /* リストカード */
+    .task-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .task-item {
+      background: var(--card-bg);
+      border-radius: 14px;
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border: 1px solid var(--border);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+    }
+
+    .task-item.completed {
+      opacity: 0.5;
+    }
+
+    .task-item.completed .task-title {
+      text-decoration: line-through;
+    }
+
+    /* タップしやすい大きめチェックボックス */
+    .checkbox {
+      width: 22px;
+      height: 22px;
+      cursor: pointer;
+      accent-color: var(--primary);
+      flex-shrink: 0;
+    }
+
+    .task-content {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .task-header {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .badge {
+      font-size: 0.7rem;
+      padding: 2px 6px;
+      border-radius: 6px;
+      font-weight: 700;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .badge-shopping { background: var(--shopping-bg); color: var(--shopping-color); }
+    .badge-daiso { background: var(--daiso-bg); color: var(--daiso-color); }
+    .badge-seria { background: var(--seria-bg); color: var(--seria-color); }
+    .badge-cando { background: var(--cando-bg); color: var(--cando-color); }
+    .badge-todo { background: var(--todo-bg); color: var(--todo-color); }
+
+    .task-title {
+      font-size: 0.95rem;
+      font-weight: 500;
+      word-break: break-word;
+    }
+
+    .task-meta {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .delete-btn {
+      background: none;
+      border: none;
+      color: #94a3b8;
+      cursor: pointer;
+      padding: 6px 8px;
+      font-size: 1.2rem;
+      flex-shrink: 0;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 0;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>📝 買い物 & TODO 管理</h1>
+</header>
+
+<div class="container">
+  <!-- 追加フォーム -->
+  <div class="form-card">
+    <div class="type-selector-wrapper">
+      <div class="type-selector">
+        <button class="type-btn active" data-type="shopping" onclick="setType('shopping')">🛒 買い物(全般)</button>
+        <button class="type-btn" data-type="daiso" onclick="setType('daiso')">🌸 ダイソー</button>
+        <button class="type-btn" data-type="seria" onclick="setType('seria')">🌿 セリア</button>
+        <button class="type-btn" data-type="cando" onclick="setType('cando')">⭐ キャンドゥ</button>
+        <button class="type-btn" data-type="todo" onclick="setType('todo')">✅ TODO</button>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <input type="text" id="taskInput" placeholder="アイテム名 / タスクを入力...">
+    </div>
+
+    <div class="form-group" id="dueDateGroup" style="display: none;">
+      <input type="date" id="dateInput">
+    </div>
+
+    <button class="add-btn" onclick="addTask()">追加する</button>
+  </div>
+
+  <!-- フィルタータブ -->
+  <div class="tabs-wrapper">
+    <div class="tabs">
+      <div class="tab active" onclick="setFilter('all', this)">すべて</div>
+      <div class="tab" onclick="setFilter('shopping_all', this)">🛒 買い物全部</div>
+      <div class="tab" onclick="setFilter('shopping', this)">🛒 一般買い物</div>
+      <div class="tab" onclick="setFilter('daiso', this)">🌸 ダイソー</div>
+      <div class="tab" onclick="setFilter('seria', this)">🌿 セリア</div>
+      <div class="tab" onclick="setFilter('cando', this)">⭐ キャンドゥ</div>
+      <div class="tab" onclick="setFilter('todo', this)">✅ TODO</div>
+    </div>
+  </div>
+
+  <!-- リスト表示部 -->
+  <div id="taskList" class="task-list"></div>
+</div>
+
+<script>
+  let currentType = 'shopping';
+  let currentFilter = 'all';
+  let tasks = JSON.parse(localStorage.getItem('my_tasks') || '[]');
+
+  const typeLabels = {
+    shopping: '買い物',
+    daiso: 'ダイソー',
+    seria: 'セリア',
+    cando: 'キャンドゥ',
+    todo: 'TODO'
+  };
+
+  function setType(type) {
+    currentType = type;
+    document.querySelectorAll('.type-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.type === type);
+    });
+    document.getElementById('dueDateGroup').style.display = type === 'todo' ? 'block' : 'none';
+  }
+
+  function setFilter(filter, element) {
+    currentFilter = filter;
+    document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+    element.classList.add('active');
+    renderTasks();
+  }
+
+  function addTask() {
+    const input = document.getElementById('taskInput');
+    const dateInput = document.getElementById('dateInput');
+    const title = input.value.trim();
+
+    if (!title) return;
+
+    const newTask = {
+      id: Date.now(),
+      title: title,
+      type: currentType,
+      dueDate: currentType === 'todo' ? dateInput.value : null,
+      completed: false,
+      createdAt: new Date().toISOString()
+    };
+
+    tasks.unshift(newTask);
+    saveAndRender();
+
+    input.value = '';
+    dateInput.value = '';
+  }
+
+  function toggleTask(id) {
+    tasks = tasks.map(t => t.id === id ? { ...t, completed: !t.completed } : t);
+    saveAndRender();
+  }
+
+  function deleteTask(id) {
+    tasks = tasks.filter(t => t.id !== id);
+    saveAndRender();
+  }
+
+  function saveAndRender() {
+    localStorage.setItem('my_tasks', JSON.stringify(tasks));
+    renderTasks();
+  }
+
+  function renderTasks() {
+    const listEl = document.getElementById('taskList');
+    const filteredTasks = tasks.filter(task => {
+      if (currentFilter === 'all') return true;
+      if (currentFilter === 'shopping_all') {
+        return ['shopping', 'daiso', 'seria', 'cando'].includes(task.type);
+      }
+      return task.type === currentFilter;
+    });
+
+    if (filteredTasks.length === 0) {
+      listEl.innerHTML = '<div class="empty-state">登録されているアイテムはありません</div>';
+      return;
+    }
+
+    listEl.innerHTML = filteredTasks.map(task => `
+      <div class="task-item ${task.completed ? 'completed' : ''}">
+        <input type="checkbox" class="checkbox" ${task.completed ? 'checked' : ''} onchange="toggleTask(${task.id})">
+        <div class="task-content">
+          <div class="task-header">
+            <span class="badge badge-${task.type}">
+              ${typeLabels[task.type] || 'メモ'}
+            </span>
+            <span class="task-title">${escapeHtml(task.title)}</span>
+          </div>
+          ${task.dueDate ? `<div class="task-meta">📅 期限: ${task.dueDate}</div>` : ''}
+        </div>
+        <button class="delete-btn" onclick="deleteTask(${task.id})" title="削除">✕</button>
+      </div>
+    `).join('');
+  }
+
+  function escapeHtml(str) {
+    return str.replace(/[&<>"']/g, match => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[match]));
+  }
+
+  renderTasks();
+</script>
+
+</body>
+</html>
